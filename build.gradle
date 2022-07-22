@@ -1,0 +1,47 @@
+plugins {
+	id 'org.springframework.boot' version '2.6.7'
+	id 'io.spring.dependency-management' version '1.0.11.RELEASE'
+	id 'java'
+}
+
+group = 'com.vnpay'
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = '1.8'
+
+configurations {
+	compileOnly {
+		extendsFrom annotationProcessor
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	implementation 'org.junit.jupiter:junit-jupiter:5.8.1'
+	implementation 'junit:junit:4.13.1'
+
+	// https://mvnrepository.com/artifact/org.projectlombok/lombok
+	compileOnly group: 'org.projectlombok', name: 'lombok', version: '1.18.24'
+	annotationProcessor 'org.projectlombok:lombok'
+	implementation group: 'com.zaxxer', name: 'HikariCP', version: '4.0.3'
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation files('libs/ojdbc6.jar')
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+// https://mvnrepository.com/artifact/org.apache.commons/commons-lang3
+	implementation group: 'org.apache.commons', name: 'commons-lang3', version: '3.12.0'
+	implementation group: 'org.bouncycastle', name: 'bcprov-jdk15on', version: '1.68'
+	// https://mvnrepository.com/artifact/org.mockito/mockito-junit-jupiter
+	testImplementation group: 'org.mockito', name: 'mockito-junit-jupiter', version: '4.5.1'
+	implementation group: 'name.falgout.jeffrey.testing.junit5', name: 'mockito-extension', version: '1.2.1'
+	testImplementation group: 'org.junit.jupiter', name: 'junit-jupiter-engine', version: '5.8.2'
+	testImplementation group: 'org.mockito', name: 'mockito-core', version: '4.5.1'
+	// https://mvnrepository.com/artifact/net.bytebuddy/byte-buddy
+	implementation group: 'net.bytebuddy', name: 'byte-buddy', version: '1.12.10'
+
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+}

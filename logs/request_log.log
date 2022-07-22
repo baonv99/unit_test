@@ -1,0 +1,8 @@
+2022-07-22 10:31:35,841 ERROR [TxnDao.java : 99] [getTxnId in TxnDAO] Error exception: null
+2022-07-22 10:31:35,848 ERROR [TxnDao.java : 68] [createTxn in TxnDAO] Error exception: null
+2022-07-22 10:31:35,850 ERROR [TxnDao.java : 110] [getAllTxn in TxnDAO] Can not get connection
+2022-07-22 10:31:35,854 ERROR [TxnDao.java : 20] [createTxn in TxnDAO] Can not get connection
+2022-07-22 10:31:35,856 ERROR [TxnDao.java : 134] [getAllTxn in TxnDAO] Error exception: null
+2022-07-22 10:31:35,857 ERROR [TxnDao.java : 40] [createTxn in TxnDAO] Error exception: null
+2022-07-22 10:31:35,860 ERROR [TxnDao.java : 78] [getTxnId in TxnDAO] Can not get connection
+2022-07-22 10:31:35,862 ERROR [TxnDao.java : 20] [createTxn in TxnDAO] Can not get connection

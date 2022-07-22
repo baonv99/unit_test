@@ -1,0 +1,644 @@
+package com.vnpay.ewallet;
+
+import com.vnpay.ewallet.beans.*;
+import com.vnpay.ewallet.common.Snowflake;
+import com.vnpay.ewallet.dao.BasketDao;
+import com.vnpay.ewallet.dao.CommonDao;
+import com.vnpay.ewallet.dao.PromoDao;
+import com.vnpay.ewallet.models.*;
+import com.vnpay.ewallet.services.ElasticService;
+import com.vnpay.ewallet.services.PromoService;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.runner.RunWith;
+import org.mockito.*;
+import org.mockito.exceptions.base.MockitoException;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ThreadPoolExecutor;
+
+import static org.mockito.Mockito.doReturn;
+
+@RunWith(SpringJUnit4ClassRunner.class)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@AutoConfigureMockMvc
+@ExtendWith(MockitoExtension.class)
+public class PromoServiceTest {
+
+    @Spy
+    @InjectMocks
+    PromoService promoService;
+
+    @Mock
+    private ValueOperations valueOperations;
+
+    @InjectMocks
+    private CampVoucherLock campVoucherLock;
+
+    @Mock
+    RedisTemplate<String, Object> redisTemplate;
+
+    @MockBean
+    PromoDao promoDao;
+
+    @MockBean
+    BasketDao basketDao;
+
+    @InjectMocks
+    private ReqUserVoucher reqUserVoucher;
+
+    @Mock
+    ElasticService elasticService;
+
+    @Mock
+    CommonDao commonDao;
+
+    @Mock
+    Snowflake txnIds;
+
+    @MockBean
+    ThreadPoolExecutor executorPool;
+
+
+    @Test
+    void getPromoListvalidateReq_id() {
+        ReqPromoList req = new ReqPromoList();
+        req.setRequest_id(null);
+        RspObj rspObj = promoService.getPromoList(req);
+        Assertions.assertEquals("04", rspObj.getCode());
+        Assertions.assertEquals("request_id khong duoc de trong", rspObj.getMessage());
+    }
+
+    @Test
+    void getPromoListvalidateAccNo() {
+        ReqPromoList req = new ReqPromoList();
+        req.setRequest_id("023456700900068112");
+        req.setAcc_no("");
+        RspObj rspObj = promoService.getPromoList(req);
+        Assertions.assertEquals("04", rspObj.getCode());
+        Assertions.assertEquals("acc_no khong duoc de trong", rspObj.getMessage());
+    }
+
+    @Test
+    void getPromoListvalidateMobile_no() {
+        ReqPromoList req = new ReqPromoList();
+        req.setRequest_id("023456700900068112");
+        req.setAcc_no("4211010084411229638577");
+        req.setMobile_no("");
+
+        RspObj rspObj = promoService.getPromoList(req);
+        Assertions.assertEquals("04", rspObj.getCode());
+        Assertions.assertEquals("Mobile_no khong duoc de trong", rspObj.getMessage());
+    }
+
+    @Test
+    void getPromoListvalidateTmn_code() {
+        ReqPromoList req = new ReqPromoList();
+        req.setRequest_id("023456700900068112");
+        req.setAcc_no("4211010084411229638577");
+        req.setMobile_no("0397517386");
+        req.setTmn_code("");
+
+        RspObj rspObj = promoService.getPromoList(req);
+        Assertions.assertEquals("04", rspObj.getCode());
+        Assertions.assertEquals("tmn_code khong duoc de trong", rspObj.getMessage());
+    }
+
+    @Test
+    void getPromoListvalidateUser_type() {
+        ReqPromoList req = new ReqPromoList();
+        req.setRequest_id("023456700900068112");
+        req.setAcc_no("4211010084411229638577");
+        req.setMobile_no("0397517386");
+        req.setTmn_code("1");
+        req.setUser_type("");
+
+        RspObj rspObj = promoService.getPromoList(req);
+        Assertions.assertEquals("04", rspObj.getCode());
+        Assertions.assertEquals("User_type khong duoc de trong", rspObj.getMessage());
+    }
+
+    @Test
+    void getPromoListValidateApp_id() {
+        ReqPromoList req = new ReqPromoList();
+        req.setRequest_id("023456700900068112");
+        req.setAcc_no("4211010084411229638577");
+        req.setMobile_no("0397517386");
+        req.setTmn_code("1");
+        req.setUser_type("1");
+        req.setApp_id("");
+
+        RspObj rspObj = promoService.getPromoList(req);
+        Assertions.assertEquals("04", rspObj.getCode());
+        Assertions.assertEquals("app_id khong duoc de trong", rspObj.getMessage());
+    }
+
+    @Test
+    void getPromoListValidateLang() {
+        ReqPromoList req = new ReqPromoList();
+        req.setRequest_id("023456700900068112");
+        req.setAcc_no("4211010084411229638577");
+        req.setMobile_no("0397517386");
+        req.setTmn_code("1");
+        req.setUser_type("1");
+        req.setApp_id("0987801274");
+        req.setLang("");
+
+        RspObj rspObj = promoService.getPromoList(req);
+        Assertions.assertEquals("04", rspObj.getCode());
+        Assertions.assertEquals("Language khong duoc de trong", rspObj.getMessage());
+    }
+
+    @Test
+    void getPromoListValidateDebit_amount() {
+        ReqPromoList req = new ReqPromoList();
+        req.setRequest_id("023456700900068112");
+        req.setAcc_no("4211010084411229638577");
+        req.setMobile_no("0397517386");
+        req.setTmn_code("1");
+        req.setUser_type("1");
+        req.setApp_id("0987801274");
+        req.setLang("VN");
+        req.setDebit_amount("");
+
+        RspObj rspObj = promoService.getPromoList(req);
+        Assertions.assertEquals("04", rspObj.getCode());
+        Assertions.assertEquals("Debit_amount khong duoc de trong", rspObj.getMessage());
+    }
+//    @Test
+//    void getPromoListValidateException() {
+//        ReqPromoList req = new ReqPromoList();
+//        req.setRequest_id("023456700900068112");
+//        req.setAcc_no("4211010084411229638577");
+//        req.setMobile_no("0397517386");
+//        req.setTmn_code("1");
+//        req.setUser_type("1");
+//        req.setApp_id("0987801274");
+//        req.setLang("VN");
+//        req.setDebit_amount("100000");
+//
+//
+//        Mockito.when(validateBiz).thenThrow(MockitoException.class);
+//
+//        RspObj rspObj = promoService.getPromoList(req);
+//        Assertions.assertEquals("99", rspObj.getCode());
+//        Assertions.assertEquals("Có lỗi xảy ra", rspObj.getMessage());
+//    }
+
+    @Test
+    void getPromoListSuccess() {
+        ReqPromoList req = new ReqPromoList();
+        req.setRequest_id("023456700900068112");
+        req.setAcc_no("4211010084411229638577");
+        req.setMobile_no("0397517386");
+        req.setTmn_code("1");
+        req.setUser_type("1");
+        req.setApp_id("0987801274");
+        req.setLang("VN");
+        req.setDebit_amount("100000");
+        req.setPromo_type("1");
+
+        PromoList promoList = new PromoList();
+
+        List<PromoList> lstTxn = new ArrayList<>();
+        lstTxn.add(promoList);
+        Mockito.when(promoDao.getPromoList_V2(req.getTmn_code(), req.getAcc_no(), req.getUser_type(), req.getMobile_no(),
+                req.getOrg_mobile_no(), req.getPromo_type(), req.getLang(), req.getPay_type())).thenReturn(lstTxn);
+
+        RspObj rspObj = promoService.getPromoList(req);
+        Assertions.assertEquals("00", rspObj.getCode());
+        Assertions.assertEquals("Get Promo List Success", rspObj.getMessage());
+    }
+
+    @Test
+    void getPromoListException() {
+        ReqPromoList req = new ReqPromoList();
+        req.setRequest_id("023456700900068112");
+        req.setAcc_no("4211010084411229638577");
+        req.setMobile_no("0397517386");
+        req.setTmn_code("1");
+        req.setUser_type("1");
+        req.setApp_id("0987801274");
+        req.setLang("VN");
+        req.setDebit_amount("100000");
+        req.setPromo_type("1");
+
+        PromoList promoList = new PromoList();
+
+        List<PromoList> lstTxn = new ArrayList<>();
+        lstTxn.add(promoList);
+        Mockito.when(promoDao.getPromoList_V2(req.getTmn_code(), req.getAcc_no(), req.getUser_type(), req.getMobile_no(),
+                req.getOrg_mobile_no(), req.getPromo_type(), req.getLang(), req.getPay_type())).thenThrow(MockitoException.class);
+
+        RspObj rspObj = promoService.getPromoList(req);
+        Assertions.assertEquals("99", rspObj.getCode());
+        // Assertions.assertEquals("Get Promo List Success", rspObj.getMessage());
+    }
+
+    @Test
+    void ValidPromoValidateReq_id() {
+        ReqPromo reqData = new ReqPromo();
+        reqData.setRequest_id("");
+        RspObj rspObj = promoService.ValidPromo(reqData);
+        Assertions.assertEquals("04", rspObj.getCode());
+        Assertions.assertEquals("request_id khong duoc de trong", rspObj.getMessage());
+    }
+
+    @Test
+    void ValidPromoValidatePromo_code() {
+        ReqPromo reqData = new ReqPromo();
+        reqData.setRequest_id("023456700900068112");
+        reqData.setPromo_code("");
+        RspObj rspObj = promoService.ValidPromo(reqData);
+        Assertions.assertEquals("04", rspObj.getCode());
+        Assertions.assertEquals("Promo_code khong duoc de trong", rspObj.getMessage());
+    }
+
+    @Test
+    void ValidPromoValidateTmn_code() {
+        ReqPromo reqData = new ReqPromo();
+        reqData.setRequest_id("023456700900068112");
+        reqData.setPromo_code("ELECTRIC01");
+        reqData.setTmn_code("");
+        RspObj rspObj = promoService.ValidPromo(reqData);
+        Assertions.assertEquals("04", rspObj.getCode());
+        Assertions.assertEquals("Tmn_code khong duoc de trong", rspObj.getMessage());
+    }
+
+    @Test
+    void ValidPromoValidateMobile_no() {
+        ReqPromo reqData = new ReqPromo();
+        reqData.setRequest_id("023456700900068112");
+        reqData.setPromo_code("ELECTRIC01");
+        reqData.setTmn_code("ELEC001");
+        reqData.setMobile_no("");
+        RspObj rspObj = promoService.ValidPromo(reqData);
+        Assertions.assertEquals("04", rspObj.getCode());
+        Assertions.assertEquals("mobile_no khong duoc de trong", rspObj.getMessage());
+    }
+
+    @Test
+    void ValidPromoValidateDebit_amount() {
+        ReqPromo reqData = new ReqPromo();
+        reqData.setRequest_id("023456700900068112");
+        reqData.setPromo_code("ELECTRIC01");
+        reqData.setTmn_code("ELEC001");
+        reqData.setMobile_no("0987801274");
+        reqData.setDebit_amount("");
+        RspObj rspObj = promoService.ValidPromo(reqData);
+        Assertions.assertEquals("04", rspObj.getCode());
+        Assertions.assertEquals("Debit_amount khong duoc de trong", rspObj.getMessage());
+    }
+
+    @Test
+    void ValidPromoValidatePromo_codeLength() {
+        ReqPromo reqData = new ReqPromo();
+        reqData.setRequest_id("023456700900068112");
+        reqData.setPromo_code("ELECTRIC01dfasdhfgajkdfgakdsgfajsdhkgafhgsdfhkasdgfkjgaskdfgaksdgfhaksdgfhasd");
+        reqData.setTmn_code("ELEC001");
+        reqData.setMobile_no("0987801274");
+        reqData.setDebit_amount("1000000");
+        RspObj rspObj = promoService.ValidPromo(reqData);
+        Assertions.assertEquals("04", rspObj.getCode());
+        Assertions.assertEquals("Ma voucher khong qua 50 ky tu", rspObj.getMessage());
+    }
+
+    @Test
+    void ValidPromoValidateTmn_codeLength() {
+        ReqPromo reqData = new ReqPromo();
+        reqData.setRequest_id("023456700900068112");
+        reqData.setPromo_code("ELECTRIC01");
+        reqData.setTmn_code("ELEC001ádfkladhfoiqwuehrqewhubaksdfnakdsfkadfkladshflahdfadfasd");
+        reqData.setMobile_no("0987801274");
+        reqData.setDebit_amount("1000000");
+        RspObj rspObj = promoService.ValidPromo(reqData);
+        Assertions.assertEquals("04", rspObj.getCode());
+        Assertions.assertEquals("Ma Terminal khong qua 10 ky tu", rspObj.getMessage());
+    }
+
+    @Test
+    void ValidPromoValidate01() {
+        ReqPromo reqData = new ReqPromo();
+        reqData.setRequest_id("023456700900068112");
+        reqData.setPromo_code("ELECTRIC01");
+        reqData.setTmn_code("ELEC001");
+        reqData.setMobile_no("0987801274");
+        reqData.setDebit_amount("1000000");
+
+        Terminal terminal = new Terminal();
+        terminal.setCode("01");
+        Mockito.when(promoDao.ValidTerminal(reqData.getTmn_code(), reqData.getPromo_code())).thenReturn(terminal);
+
+        RspObj rspObj = promoService.ValidPromo(reqData);
+        Assertions.assertEquals("01", rspObj.getCode());
+        Assertions.assertEquals("Khong tim thay ma Terminal tuong ung voi dich vu", rspObj.getMessage());
+    }
+
+    @Test
+    void ValidPromoValidate02() {
+        ReqPromo reqData = new ReqPromo();
+        reqData.setRequest_id("023456700900068112");
+        reqData.setPromo_code("ELECTRIC01");
+        reqData.setTmn_code("ELEC001");
+        reqData.setMobile_no("0987801274");
+        reqData.setDebit_amount("1000000");
+
+        Terminal terminal = new Terminal();
+        terminal.setCode("02");
+        Mockito.when(promoDao.ValidTerminal(reqData.getTmn_code(), reqData.getPromo_code())).thenReturn(terminal);
+
+        RspObj rspObj = promoService.ValidPromo(reqData);
+        Assertions.assertEquals("02", rspObj.getCode());
+        Assertions.assertEquals("Ma khuyen mai khong dung", rspObj.getMessage());
+    }
+
+    @Test
+    void ValidPromoValidate99() {
+        ReqPromo reqData = new ReqPromo();
+        reqData.setRequest_id("023456700900068112");
+        reqData.setPromo_code("ELECTRIC01");
+        reqData.setTmn_code("ELEC001");
+        reqData.setMobile_no("0987801274");
+        reqData.setDebit_amount("1000000");
+
+        Terminal terminal = new Terminal();
+        terminal.setCode("99");
+        Mockito.when(promoDao.ValidTerminal(reqData.getTmn_code(), reqData.getPromo_code())).thenReturn(terminal);
+
+        RspObj rspObj = promoService.ValidPromo(reqData);
+        Assertions.assertEquals("99", rspObj.getCode());
+        Assertions.assertEquals("Lỗi hệ thống khi xử lí", rspObj.getMessage());
+    }
+
+    @Test
+    void ValidPromoValidate00() {
+        ReqPromo reqData = new ReqPromo();
+        reqData.setRequest_id("023456700900068112");
+        reqData.setPromo_code("ELECTRIC01");
+        reqData.setTmn_code("ELEC001");
+        reqData.setMobile_no("0987801274");
+        reqData.setDebit_amount("1000000");
+
+        Terminal terminal = new Terminal();
+        terminal.setCode("00");
+        terminal.setVoucherCode("ELECTRIC01");
+        Mockito.when(promoDao.ValidTerminal(reqData.getTmn_code(), reqData.getPromo_code())).thenReturn(terminal);
+
+        RspObj rspObjPromo = new RspObj();
+        rspObjPromo.setCode("00");
+        rspObjPromo.setData(12323);
+        doReturn(rspObjPromo).when(promoService).CaculatePromo(reqData.getPromo_code(), reqData.getDebit_amount());
+
+        RspObj rspObj = promoService.ValidPromo(reqData);
+        Assertions.assertEquals("00", rspObj.getCode());
+        Assertions.assertEquals("Suscess", rspObj.getMessage());
+    }
+
+    @Test
+    void ValidPromoValidate08() {
+        ReqPromo reqData = new ReqPromo();
+        reqData.setRequest_id("023456700900068112");
+        reqData.setPromo_code("ELECTRIC01");
+        reqData.setTmn_code("ELEC001");
+        reqData.setMobile_no("0987801274");
+        reqData.setDebit_amount("1000000");
+
+        Terminal terminal = new Terminal();
+        terminal.setCode("00");
+        terminal.setVoucherCode("ELECTRIC01");
+        Mockito.when(promoDao.ValidTerminal(reqData.getTmn_code(), reqData.getPromo_code())).thenThrow(MockitoException.class);
+
+
+        RspObj rspObj = promoService.ValidPromo(reqData);
+        Assertions.assertEquals("08", rspObj.getCode());
+        Assertions.assertEquals("Lỗi hệ thống khi xử lí", rspObj.getMessage());
+    }
+
+    @Test
+    void ConfirmPromoValidateReq_id() {
+        ReqConfirmPromo reqEntity = new ReqConfirmPromo();
+        reqEntity.setRequest_id("");
+
+
+        RspObj rspObj = promoService.ConfirmPromo(reqEntity);
+        Assertions.assertEquals("04", rspObj.getCode());
+        Assertions.assertEquals("request_id khong duoc de trong", rspObj.getMessage());
+    }
+
+    @Test
+    void ConfirmPromoValidatePromo_code() {
+        ReqConfirmPromo reqEntity = new ReqConfirmPromo();
+        reqEntity.setRequest_id("023456700900068112");
+        reqEntity.setPromo_code("");
+
+
+        RspObj rspObj = promoService.ConfirmPromo(reqEntity);
+        Assertions.assertEquals("04", rspObj.getCode());
+        Assertions.assertEquals("Promo_code khong duoc de trong", rspObj.getMessage());
+    }
+
+    @Test
+    void ConfirmPromoValidateTmn_code() {
+        ReqConfirmPromo reqEntity = new ReqConfirmPromo();
+        reqEntity.setRequest_id("023456700900068112");
+        reqEntity.setPromo_code("VNPAY");
+        reqEntity.setTmn_code("");
+
+
+        RspObj rspObj = promoService.ConfirmPromo(reqEntity);
+        Assertions.assertEquals("04", rspObj.getCode());
+        Assertions.assertEquals("Tmn_code khong duoc de trong", rspObj.getMessage());
+    }
+
+    @Test
+    void ConfirmPromoValidateMobile_no() {
+        ReqConfirmPromo reqEntity = new ReqConfirmPromo();
+        reqEntity.setRequest_id("023456700900068112");
+        reqEntity.setPromo_code("VNPAY");
+        reqEntity.setTmn_code("TOPUP01");
+        reqEntity.setMobile_no("");
+
+
+        RspObj rspObj = promoService.ConfirmPromo(reqEntity);
+        Assertions.assertEquals("04", rspObj.getCode());
+        Assertions.assertEquals("mobile_no khong duoc de trong", rspObj.getMessage());
+    }
+
+    @Test
+    void ConfirmPromoValidateDebit_amount() {
+        ReqConfirmPromo reqEntity = new ReqConfirmPromo();
+        reqEntity.setRequest_id("023456700900068112");
+        reqEntity.setPromo_code("VNPAY");
+        reqEntity.setTmn_code("TOPUP01");
+        reqEntity.setMobile_no("0987801274");
+        reqEntity.setDebit_amount("");
+
+
+        RspObj rspObj = promoService.ConfirmPromo(reqEntity);
+        Assertions.assertEquals("04", rspObj.getCode());
+        Assertions.assertEquals("Debit_amount khong duoc de trong", rspObj.getMessage());
+    }
+
+    @Test
+    void ConfirmPromoValidatePromo_codeLength() {
+        ReqConfirmPromo reqEntity = new ReqConfirmPromo();
+        reqEntity.setRequest_id("023456700900068112");
+        reqEntity.setPromo_code("VNPAY111111111111111111111111111111111111111111111111111111111111111111");
+        reqEntity.setTmn_code("TOPUP01");
+        reqEntity.setMobile_no("0987801274");
+        reqEntity.setDebit_amount("1000000");
+
+
+        RspObj rspObj = promoService.ConfirmPromo(reqEntity);
+        Assertions.assertEquals("04", rspObj.getCode());
+        Assertions.assertEquals("Ma voucher khong qua 50 ky tu", rspObj.getMessage());
+    }
+
+    @Test
+    void ConfirmPromoValidateTmn_codeLength() {
+        ReqConfirmPromo reqEntity = new ReqConfirmPromo();
+        reqEntity.setRequest_id("023456700900068112");
+        reqEntity.setPromo_code("VNPAY");
+        reqEntity.setTmn_code("TOPUP0111111111111111111111111111111111111111111111111111111111111111111");
+        reqEntity.setMobile_no("0987801274");
+        reqEntity.setDebit_amount("1000000");
+
+
+        RspObj rspObj = promoService.ConfirmPromo(reqEntity);
+        Assertions.assertEquals("04", rspObj.getCode());
+        Assertions.assertEquals("Ma Terminal khong qua 10 ky tu", rspObj.getMessage());
+    }
+
+    @Test
+    void ConfirmPromo08() {
+        ReqConfirmPromo reqData = new ReqConfirmPromo();
+        reqData.setRequest_id("023456700900068112");
+        reqData.setPromo_code("VNPAY");
+        reqData.setTmn_code("TOPUP01");
+        reqData.setMobile_no("0987801274");
+        reqData.setDebit_amount("1000000");
+        reqData.setBasket_id("699506381526671360");
+
+
+        RspObj rspObj = promoService.ConfirmPromo(reqData);
+        Assertions.assertEquals("08", rspObj.getCode());
+        Assertions.assertEquals("Lỗi hệ thống khi xử lí", rspObj.getMessage());
+    }
+
+    @Test
+    void ConfirmPromo01() {
+        ReqConfirmPromo reqData = new ReqConfirmPromo();
+        reqData.setRequest_id("023456700900068112");
+        reqData.setPromo_code("VNPAY");
+        reqData.setTmn_code("TOPUP01");
+        reqData.setMobile_no("0987801274");
+        reqData.setDebit_amount("1000000");
+        reqData.setBasket_id("699506381526671360");
+
+        ReqUserVoucher eqUserVoucher = new ReqUserVoucher();
+        eqUserVoucher.setBasket_id(reqData.getBasket_id());
+        eqUserVoucher.setVoucher_code(reqData.getPromo_code());
+        eqUserVoucher.setAcc_no(reqData.getAcc_no());
+
+
+        Basket basket = new Basket();
+        basket.setBasketId("699506381526671360");
+        Mockito.when(basketDao.ValidBasket(eqUserVoucher)).thenReturn(basket)
+;
+
+        Terminal terminal = new Terminal();
+        terminal.setCampVoucherId("123124234");
+        Mockito.when(promoDao.ValidTerminal(reqData.getTmn_code(), reqData.getPromo_code())).thenReturn(terminal);
+
+
+        RspObj rspObj = promoService.ConfirmPromo(reqData);
+        Assertions.assertEquals("01", rspObj.getCode());
+        Assertions.assertEquals("Lỗi sử dụng quà tặng, Quý khách vui lòng thử lại sau.", rspObj.getMessage());
+    }
+
+    @Test
+    void ConfirmPromo00() {
+        ReqConfirmPromo reqData = new ReqConfirmPromo();
+        reqData.setRequest_id("023456700900068112");
+        reqData.setPromo_code("VNPAY");
+        reqData.setTmn_code("TOPUP01");
+        reqData.setMobile_no("0987801274");
+        reqData.setDebit_amount("1000000");
+        reqData.setBasket_id("699506381526671360");
+
+        reqUserVoucher = new ReqUserVoucher();
+        reqUserVoucher.setBasket_id(reqData.getBasket_id());
+        reqUserVoucher.setVoucher_code(reqData.getPromo_code());
+        reqUserVoucher.setAcc_no(reqData.getAcc_no());
+
+        Basket basket = new Basket();
+        basket.setBasketId("699506381526671360");
+        basket.setAccNo("4211010084411266626191");
+        Mockito.when(basketDao.ValidBasket(ArgumentMatchers.any(ReqUserVoucher.class))).thenReturn(basket)
+;
+
+        Mockito.when(basketDao.UpdateStatusBasket(ArgumentMatchers.anyString(), ArgumentMatchers.anyString())).thenReturn(true);
+
+        Terminal terminal = new Terminal();
+        terminal.setCampVoucherId("123124234");
+        Mockito.when(promoDao.ValidTerminal(reqData.getTmn_code(), reqData.getPromo_code())).thenReturn(terminal);
+
+
+        RspObj rspObj = promoService.ConfirmPromo(reqData);
+        Assertions.assertEquals("00", rspObj.getCode());
+        Assertions.assertEquals("Su dung qua thanh cong", rspObj.getMessage());
+    }
+
+    @Test
+    void CaculatePromo06() {
+        String promoCode = "";
+        String debitAmt = "";
+
+        RspObj rspObj = promoService.CaculatePromo(promoCode, debitAmt);
+        Assertions.assertEquals("06", rspObj.getCode());
+        Assertions.assertEquals("Khong co rule tuong ung voi ma voucher", rspObj.getMessage());
+    }
+
+    @Test
+    void CaculatePromo00() {
+        String promoCode = "VNPAY";
+        String debitAmt = "10000";
+
+        VoucherRule voucherRule = new VoucherRule();
+        voucherRule.setRuleCode("DIS_PERCENT");
+        voucherRule.setRuleValue(10);
+        List<VoucherRule> list = new ArrayList<>();
+        list.add(voucherRule);
+        Mockito.when(promoDao.getVoucherRuleById(promoCode)).thenReturn(list);
+
+        RspObj rspObj = promoService.CaculatePromo(promoCode, debitAmt);
+        Assertions.assertEquals("00", rspObj.getCode());
+        Assertions.assertEquals("Suscess", rspObj.getMessage());
+    }
+
+    @Test
+    void CaculatePromo99() {
+        String promoCode = "VNPAY";
+        String debitAmt = "10000";
+
+        VoucherRule voucherRule = new VoucherRule();
+        voucherRule.setRuleCode("DIS_PERCENT");
+        voucherRule.setRuleValue(10);
+        List<VoucherRule> list = new ArrayList<>();
+        list.add(voucherRule);
+        Mockito.when(promoDao.getVoucherRuleById(promoCode)).thenThrow(MockitoException.class);
+
+        RspObj rspObj = promoService.CaculatePromo(promoCode, debitAmt);
+        Assertions.assertEquals("99", rspObj.getCode());
+        Assertions.assertEquals("Có lỗi xảy ra trong quá trình giao dịch", rspObj.getMessage());
+    }
+}
